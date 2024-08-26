@@ -1,0 +1,5 @@
+node_modules
+
+# TEMP FILES
+$RECYCLE.BIN/
+.DS_Store

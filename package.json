@@ -1,0 +1,50 @@
+{
+  "name": "picohelm",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "A helm alternative for kubernetes",
+  "bin": "build/picohelm.js",
+  "main": "build/picohelm.js",
+  "scripts": {
+    "build": "esbuild src/picohelm.ts --bundle --platform=node --packages=external --outfile=build/picohelm.js",
+    "lint": "eslint src --ext .ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/carlhannes/picohelm.git"
+  },
+  "keywords": [
+    "picohelm",
+    "k8s",
+    "kubernetes",
+    "helm",
+    "templating",
+    "mustache"
+  ],
+  "author": "carlhannes",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/carlhannes/picohelm/issues"
+  },
+  "homepage": "https://github.com/carlhannes/picohelm#readme",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "glob": "^11.0.0",
+    "js-yaml": "^4.1.0",
+    "mustache": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/mustache": "^4.2.5",
+    "@types/node": "^22.5.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "esbuild": "0.23.1",
+    "eslint": "^8.57.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-airbnb-typescript": "^18.0.0",
+    "eslint-plugin-import": "^2.29.1",
+    "typescript": "^5.5.4"
+  }
+}
