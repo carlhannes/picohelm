@@ -102,7 +102,7 @@ function parseSetValues(setValues: string[]): Values {
 async function main() {
   program
     .version(version, '-v, --version')
-    .argument('[basePath]', 'Base path for templates and values', 'k8s')
+    .argument('[basePath]', 'Base path for templates and values', '.')
     .option('-f, --values <paths...>', 'Path to values files')
     .option('--set <values...>', 'Set values on the command line')
     .option('--verbose', 'Enable verbose logging to see processed files and the merged values')

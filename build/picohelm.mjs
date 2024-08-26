@@ -75,7 +75,7 @@ function parseSetValues(setValues) {
   return result;
 }
 async function main() {
-  program.version(version, "-v, --version").argument("[basePath]", "Base path for templates and values", "k8s").option("-f, --values <paths...>", "Path to values files").option("--set <values...>", "Set values on the command line").option("--verbose", "Enable verbose logging to see processed files and the merged values").helpOption("-h, --help", "Display help for command").parse(process.argv);
+  program.version(version, "-v, --version").argument("[basePath]", "Base path for templates and values", ".").option("-f, --values <paths...>", "Path to values files").option("--set <values...>", "Set values on the command line").option("--verbose", "Enable verbose logging to see processed files and the merged values").helpOption("-h, --help", "Display help for command").parse(process.argv);
   const options = program.opts();
   const basePath = path.resolve(process.cwd(), program.args[0] || ".");
   const templatesPath = path.join(basePath, "templates");
