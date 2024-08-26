@@ -6,12 +6,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 import { program } from 'commander';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as yaml from 'js-yaml';
-import * as mustache from 'mustache';
-import * as dotenv from 'dotenv';
+import fs from 'fs/promises';
+import path from 'path';
+import yaml from 'js-yaml';
+import wontache from 'wontache';
+import dotenv from 'dotenv';
 import { glob } from 'glob';
+import { version } from '../package.json';
 
 dotenv.config();
 
@@ -46,7 +47,8 @@ async function processTemplate(
   }
 
   const templateContent = await readFile(templatePath);
-  const renderedContent = mustache.render(templateContent, values);
+  const template = wontache(templateContent);
+  const renderedContent = template(values);
 
   const outputPath = path.join('output', path.relative('templates', templatePath));
   const outputExtension = path.extname(outputPath);
@@ -98,26 +100,17 @@ function parseSetValues(setValues: string[]): Values {
 }
 
 async function main() {
-  // import version from package.json
-  let version = '';
-  try {
-    version = JSON.parse(await readFile(path.resolve(__dirname, '../package.json'))).version;
-  } catch (error) {
-    console.error('Error: Could not read package.json file.');
-    process.exit(1);
-  }
-
   program
     .version(version, '-v, --version')
     .argument('[basePath]', 'Base path for templates and values', 'k8s')
     .option('-f, --values <paths...>', 'Path to values files')
     .option('--set <values...>', 'Set values on the command line')
-    .option('--verbose', 'Enable verbose logging')
+    .option('--verbose', 'Enable verbose logging to see processed files and the merged values')
     .helpOption('-h, --help', 'Display help for command')
     .parse(process.argv);
 
   const options = program.opts();
-  const basePath = path.resolve(process.cwd(), program.args[0] || 'k8s');
+  const basePath = path.resolve(process.cwd(), program.args[0] || '.');
   const templatesPath = path.join(basePath, 'templates');
   const valuesFiles = options.values || [];
   const setValues = options.set || [];
@@ -126,12 +119,23 @@ async function main() {
   try {
     // Read values files
     const valueObjects = await Promise.all(
-      [path.join(basePath, 'values.yml'), path.join(basePath, 'values.yaml'), path.join(basePath, 'values.json'), ...valuesFiles]
-        .filter((file) => fs
-          .access(file)
-          .then(() => true)
-          .catch(() => false))
-        .map(async (file) => parseYamlOrJson(await readFile(file))),
+      [
+        path.join(basePath, 'values.yml'),
+        path.join(basePath, 'values.yaml'),
+        path.join(basePath, 'values.json'),
+        ...valuesFiles,
+      ]
+        .map(async (file) => {
+          try {
+            const content = await readFile(file);
+            return parseYamlOrJson(content);
+          } catch (error) {
+            if ((error as any).code !== 'ENOENT') {
+              throw error;
+            }
+            return {};
+          }
+        }),
     );
 
     // Merge values
@@ -146,6 +150,13 @@ async function main() {
       if ((error as any).code !== 'ENOENT') {
         throw error;
       }
+    }
+
+    if (verbose) {
+      console.log(
+        'Merged values:',
+        JSON.stringify(finalValues, null, 2),
+      );
     }
 
     // Clear output folder

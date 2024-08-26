@@ -1,41 +1,23 @@
 #!/usr/bin/env node
-"use strict";
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
 
 // src/picohelm.ts
-var import_commander = require("commander");
-var fs = __toESM(require("fs/promises"), 1);
-var path = __toESM(require("path"), 1);
-var yaml = __toESM(require("js-yaml"), 1);
-var mustache = __toESM(require("mustache"), 1);
-var dotenv = __toESM(require("dotenv"), 1);
-var import_glob = require("glob");
+import { program } from "commander";
+import fs from "fs/promises";
+import path from "path";
+import yaml from "js-yaml";
+import wontache from "wontache";
+import dotenv from "dotenv";
+import { glob } from "glob";
+
+// package.json
+var version = "0.1.0";
+
+// src/picohelm.ts
 dotenv.config();
-async function readFile2(filePath) {
+async function readFile(filePath) {
   return fs.readFile(filePath, "utf-8");
 }
-async function writeFile2(filePath, content) {
+async function writeFile(filePath, content) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, content, "utf-8");
 }
@@ -50,12 +32,13 @@ async function processTemplate(templatePath, values, verbose) {
   if (verbose) {
     console.log(`Processing ${path.relative(process.cwd(), templatePath)}`);
   }
-  const templateContent = await readFile2(templatePath);
-  const renderedContent = mustache.render(templateContent, values);
+  const templateContent = await readFile(templatePath);
+  const template = wontache(templateContent);
+  const renderedContent = template(values);
   const outputPath = path.join("output", path.relative("templates", templatePath));
   const outputExtension = path.extname(outputPath);
   const finalOutputPath = outputExtension === ".json" ? outputPath.replace(/\.json$/, ".yml") : outputPath;
-  await writeFile2(finalOutputPath, renderedContent);
+  await writeFile(finalOutputPath, renderedContent);
 }
 async function clearOutputFolder() {
   const outputPath = path.resolve(process.cwd(), "output");
@@ -92,36 +75,50 @@ function parseSetValues(setValues) {
   return result;
 }
 async function main() {
-  let version = "";
-  try {
-    version = JSON.parse(await readFile2(path.resolve(__dirname, "../package.json"))).version;
-  } catch (error) {
-    console.error("Error: Could not read package.json file.");
-    process.exit(1);
-  }
-  import_commander.program.version(version, "-v, --version").argument("[basePath]", "Base path for templates and values", "k8s").option("-f, --values <paths...>", "Path to values files").option("--set <values...>", "Set values on the command line").option("--verbose", "Enable verbose logging").helpOption("-h, --help", "Display help for command").parse(process.argv);
-  const options = import_commander.program.opts();
-  const basePath = path.resolve(process.cwd(), import_commander.program.args[0] || "k8s");
+  program.version(version, "-v, --version").argument("[basePath]", "Base path for templates and values", "k8s").option("-f, --values <paths...>", "Path to values files").option("--set <values...>", "Set values on the command line").option("--verbose", "Enable verbose logging to see processed files and the merged values").helpOption("-h, --help", "Display help for command").parse(process.argv);
+  const options = program.opts();
+  const basePath = path.resolve(process.cwd(), program.args[0] || ".");
   const templatesPath = path.join(basePath, "templates");
   const valuesFiles = options.values || [];
   const setValues = options.set || [];
   const verbose = options.verbose || false;
   try {
     const valueObjects = await Promise.all(
-      [path.join(basePath, "values.yml"), path.join(basePath, "values.yaml"), path.join(basePath, "values.json"), ...valuesFiles].filter((file) => fs.access(file).then(() => true).catch(() => false)).map(async (file) => parseYamlOrJson(await readFile2(file)))
+      [
+        path.join(basePath, "values.yml"),
+        path.join(basePath, "values.yaml"),
+        path.join(basePath, "values.json"),
+        ...valuesFiles
+      ].map(async (file) => {
+        try {
+          const content = await readFile(file);
+          return parseYamlOrJson(content);
+        } catch (error) {
+          if (error.code !== "ENOENT") {
+            throw error;
+          }
+          return {};
+        }
+      })
     );
     const mergedValues = mergeValues([...valueObjects, parseSetValues(setValues)]);
     const finalValues = { "": { Values: mergedValues, ENV: process.env } };
     try {
-      const chartContent = await readFile2(path.join(basePath, "Chart.yml"));
+      const chartContent = await readFile(path.join(basePath, "Chart.yml"));
       finalValues[""].Chart = parseYamlOrJson(chartContent);
     } catch (error) {
       if (error.code !== "ENOENT") {
         throw error;
       }
     }
+    if (verbose) {
+      console.log(
+        "Merged values:",
+        JSON.stringify(finalValues, null, 2)
+      );
+    }
     await clearOutputFolder();
-    const templateFiles = await (0, import_glob.glob)("**/*.{yml,yaml,json}", { cwd: templatesPath });
+    const templateFiles = await glob("**/*.{yml,yaml,json}", { cwd: templatesPath });
     if (templateFiles.length === 0) {
       throw new Error("No template files found in the templates folder.");
     }

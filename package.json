@@ -3,10 +3,10 @@
   "type": "module",
   "version": "0.1.0",
   "description": "A helm alternative for kubernetes",
-  "bin": "build/picohelm.js",
-  "main": "build/picohelm.js",
+  "bin": "build/picohelm.mjs",
+  "main": "build/picohelm.mjs",
   "scripts": {
-    "build": "esbuild src/picohelm.ts --bundle --platform=node --packages=external --outfile=build/picohelm.js",
+    "build": "esbuild src/picohelm.ts --bundle --platform=node --packages=external --format=esm --outfile=build/picohelm.mjs",
     "lint": "eslint src --ext .ts"
   },
   "repository": {
@@ -32,7 +32,8 @@
     "dotenv": "^16.4.5",
     "glob": "^11.0.0",
     "js-yaml": "^4.1.0",
-    "mustache": "^4.2.0"
+    "mustache": "^4.2.0",
+    "wontache": "^0.2.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
