@@ -1,7 +1,7 @@
 {
   "name": "picohelm",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A helm alternative for kubernetes",
   "bin": "build/picohelm.mjs",
   "main": "build/picohelm.mjs",
@@ -19,7 +19,11 @@
     "kubernetes",
     "helm",
     "templating",
-    "mustache"
+    "mustache",
+    "yaml",
+    "wontache",
+    "cli",
+    "typescript"
   ],
   "author": "carlhannes",
   "license": "MIT",
@@ -32,12 +36,10 @@
     "dotenv": "^16.4.5",
     "glob": "^11.0.0",
     "js-yaml": "^4.1.0",
-    "mustache": "^4.2.0",
     "wontache": "^0.2.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/mustache": "^4.2.5",
     "@types/node": "^22.5.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
