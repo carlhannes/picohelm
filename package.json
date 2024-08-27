@@ -3,7 +3,9 @@
   "type": "module",
   "version": "0.3.0",
   "description": "A helm alternative for kubernetes",
-  "bin": "build/picohelm.mjs",
+  "bin": {
+    "picohelm": "build/picohelm.mjs"
+  },
   "main": "build/picohelm.mjs",
   "scripts": {
     "build": "esbuild src/picohelm.ts --bundle --platform=node --packages=external --format=esm --outfile=build/picohelm.mjs",
