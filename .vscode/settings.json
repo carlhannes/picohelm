@@ -1,4 +1,8 @@
 {"editor.codeActionsOnSave": {
         "source.fixAll": "never",
         "source.fixAll.eslint": "explicit"
-    }}
+    },
+    "cSpell.words": [
+        "wontache"
+    ]
+}

@@ -162,6 +162,51 @@ Read more about [Kubernetes Secrets](https://kubernetes.io/docs/concepts/configu
 - It doesn't have built-in support for releasing or rolling back deployments.
 - No support for Helm hooks or other advanced Helm features.
 
+## Piping functionality
+
+Pipes are a powerful and flexible way to manipulate data within your templates. Inspired by the piping concept found in Unix/Linux systems and templating engines like Go's (that's widely used in Helm), pipes allow you to transform values dynamically as they are rendered in your templates. By chaining together different transformations, you can build complex data processing logic directly within your template, keeping your code clean and concise. While it is not 100% compatible with the Go/Helm templating engine, it provides a similar experience and syntax for users familiar with Helm, and we try our best to maintain a 1:1 compatibility with Helm's built-in functions.
+
+## How to Use Pipes
+
+In your templates, you can apply pipes using the `|` symbol. The pipe operator allows you to pass the output of one expression as the input to a pipe function. You can also chain multiple pipes together to perform sequential transformations.
+
+### Basic Example
+
+```mustache
+{{ .Values.name | uppercase }}
+```
+
+In the above example, the `uppercase` pipe transforms the `name` variable to uppercase.
+If your values.yml file is `name: john doe`, the output will be `JOHN DOE`.
+
+### Example with Multiple Pipes
+
+```mustache
+{{ .Values.description | trim | abbrev 10 }}
+```
+
+In this example, the `description` is first trimmed of whitespace, and then abbreviated to a maximum of 10 characters. For example, if your values.yml file is `description: "This is a long description"`, the output will be `This is a...`.
+
+### Using Pipes with Arguments
+
+Pipes can also accept arguments. If your values.yml file is:
+
+```yaml
+title: "I.Am.Henry.VIII"
+```
+and use the following template:
+
+```mustache
+{{ .Values.title | replace . - }}
+```
+
+The output will be `I-Am-Henry-VIII`.
+
+
+## Available Pipes
+
+If you look in [PIPES.md](PIPES.md), you will find a list of all the available pipes and their descriptions.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

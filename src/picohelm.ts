@@ -1,103 +1,27 @@
 #!/usr/bin/env node
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 
 import { program } from 'commander';
-import fs from 'fs/promises';
 import path from 'path';
-import yaml from 'js-yaml';
-import wontache from 'wontache';
+
 import dotenv from 'dotenv';
 import { glob } from 'glob';
 import { version } from '../package.json';
+import {
+  clearOutputFolder,
+  mergeValues,
+  parseSetValues,
+  parseYamlOrJson,
+  processTemplate,
+  readFile,
+  Values,
+} from './functions';
+import createProxy from './proxy';
 
 dotenv.config();
-
-interface Values {
-  [key: string]: any
-}
-
-async function readFile(filePath: string): Promise<string> {
-  return fs.readFile(filePath, 'utf-8');
-}
-
-async function writeFile(filePath: string, content: string): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, content, 'utf-8');
-}
-
-function parseYamlOrJson(content: string): any {
-  try {
-    return yaml.load(content);
-  } catch (e) {
-    return JSON.parse(content);
-  }
-}
-
-async function processTemplate(
-  templatePath: string,
-  values: Values,
-  verbose: boolean,
-): Promise<void> {
-  if (verbose) {
-    console.log(`Processing ${path.relative(process.cwd(), templatePath)}`);
-  }
-
-  const templateContent = await readFile(templatePath);
-  const template = wontache(templateContent);
-  const renderedContent = template(values);
-
-  const outputPath = path.join('output', path.relative('templates', templatePath));
-  const outputExtension = path.extname(outputPath);
-  const finalOutputPath = outputExtension === '.json'
-    ? outputPath.replace(/\.json$/, '.yml')
-    : outputPath;
-
-  await writeFile(finalOutputPath, renderedContent);
-}
-
-async function clearOutputFolder(): Promise<void> {
-  const outputPath = path.resolve(process.cwd(), 'output');
-
-  try {
-    const files = await fs.readdir(outputPath);
-    const nonYamlFiles = files.filter((file) => !['.yml', '.yaml'].includes(path.extname(file)));
-
-    if (nonYamlFiles.length > 0) {
-      throw new Error('Non-YAML files found in output folder. Please remove them manually for security reasons.');
-    }
-
-    await Promise.all(files.map((file) => fs.unlink(path.join(outputPath, file))));
-  } catch (error) {
-    if ((error as any).code !== 'ENOENT') {
-      throw error;
-    }
-  }
-}
-
-function mergeValues(objects: Values[]): Values {
-  return objects.reduce((acc, obj) => ({ ...acc, ...obj }), {});
-}
-
-function parseSetValues(setValues: string[]): Values {
-  const result: Values = {};
-  for (const setValue of setValues) {
-    const [key, value] = setValue.split('=');
-    const keys = key.split('.');
-    let current = result;
-    for (let i = 0; i < keys.length - 1; i += 1) {
-      if (!current[keys[i]]) {
-        current[keys[i]] = {};
-      }
-      current = current[keys[i]];
-    }
-    current[keys[keys.length - 1]] = value;
-  }
-  return result;
-}
 
 async function main() {
   program
@@ -113,19 +37,19 @@ async function main() {
   const basePath = path.resolve(process.cwd(), program.args[0] || '.');
   const templatesPath = path.join(basePath, 'templates');
   const valuesFiles = options.values || [];
-  const setValues = options.set || [];
-  const verbose = options.verbose || false;
+  const setValues: string[] = options.set || [];
+  const verbose: boolean = options.verbose || false;
 
   try {
     // Read values files
-    const valueObjects = await Promise.all(
+    const valueObjects: Values[] = await Promise.all(
       [
         path.join(basePath, 'values.yml'),
         path.join(basePath, 'values.yaml'),
         path.join(basePath, 'values.json'),
         ...valuesFiles,
       ]
-        .map(async (file) => {
+        .map(async (file: string) => {
           try {
             const content = await readFile(file);
             return parseYamlOrJson(content);
@@ -139,18 +63,34 @@ async function main() {
     );
 
     // Merge values
-    const mergedValues = mergeValues([...valueObjects, parseSetValues(setValues)]);
-    const finalValues: Values = { '': { Values: mergedValues, ENV: process.env } };
+    const mergedValues: Values = mergeValues([
+      ...valueObjects,
+      parseSetValues(setValues),
+    ]);
+    let ChartValues = {};
 
     // Read Chart.yml if exists
     try {
       const chartContent = await readFile(path.join(basePath, 'Chart.yml'));
-      finalValues[''].Chart = parseYamlOrJson(chartContent);
+      ChartValues = parseYamlOrJson(chartContent);
     } catch (error) {
       if ((error as any).code !== 'ENOENT') {
         throw error;
       }
     }
+
+    // create the final
+    const finalValues: Values = createProxy({
+      // the empty string is the root context
+      // this is to trick it to use {{ .Values }} instead of {{ Values }}
+      // to mimic Helm's behavior
+      // (i know you hate me for this)
+      '': {
+        Values: mergedValues,
+        ENV: process.env,
+        Chart: ChartValues,
+      },
+    });
 
     if (verbose) {
       console.log(
@@ -178,7 +118,7 @@ async function main() {
     console.log(`Processed ${templateFiles.length} files successfully.`);
   } catch (error) {
     console.error(`Error: ${(error as any).message}`);
-    process.exit(1);
+    throw error;
   }
 }
 

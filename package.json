@@ -1,13 +1,14 @@
 {
   "name": "picohelm",
   "type": "module",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A helm alternative for kubernetes",
   "bin": "build/picohelm.mjs",
   "main": "build/picohelm.mjs",
   "scripts": {
     "build": "esbuild src/picohelm.ts --bundle --platform=node --packages=external --format=esm --outfile=build/picohelm.mjs",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -39,6 +40,7 @@
     "wontache": "^0.2.0"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.12",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.5.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
@@ -48,6 +50,8 @@
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-airbnb-typescript": "^18.0.0",
     "eslint-plugin-import": "^2.29.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
     "typescript": "^5.5.4"
   }
 }
