@@ -1,7 +1,7 @@
 {
   "name": "picohelm",
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A helm alternative for kubernetes",
   "bin": "build/picohelm.mjs",
   "main": "build/picohelm.mjs",

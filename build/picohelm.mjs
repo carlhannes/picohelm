@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import { glob } from "glob";
 
 // package.json
-var version = "0.2.0";
+var version = "0.3.0";
 
 // src/functions.ts
 import fs from "fs/promises";
@@ -33,9 +33,17 @@ async function processTemplate(templatePath, values, verbose) {
   if (verbose) {
     console.log(`Processing ${path.relative(process.cwd(), templatePath)}`);
   }
-  const templateContent = await readFile(templatePath);
-  const template = wontache(templateContent);
-  const renderedContent = template(values);
+  let renderedContent;
+  try {
+    const templateContent = await readFile(templatePath);
+    const template = wontache(templateContent);
+    renderedContent = template(values);
+  } catch (error) {
+    console.error(`Error in template ${templatePath}:
+${error?.message}`);
+    error.$processed = true;
+    throw error;
+  }
   const outputPath = path.join("output", path.relative("templates", templatePath));
   const outputExtension = path.extname(outputPath);
   const finalOutputPath = outputExtension === ".json" ? outputPath.replace(/\.json$/, ".yml") : outputPath;
@@ -118,102 +126,150 @@ function base32Decode(inputStr) {
   return output;
 }
 var encodingPipes = {
-  b64enc: (value) => Buffer.from(value).toString("base64"),
-  b64dec: (value) => Buffer.from(value, "base64").toString("utf-8"),
-  b32enc: (value) => base32Encode(value),
-  b32dec: (value) => base32Decode(value)
+  b64enc: (value) => Buffer.from(value.toString()).toString("base64"),
+  b64dec: (value) => Buffer.from(value.toString(), "base64").toString("utf-8"),
+  b32enc: (value) => base32Encode(value.toString()),
+  b32dec: (value) => base32Decode(value.toString())
 };
 var encoding_default = encodingPipes;
+
+// src/pipes/object-array-sort.ts
+var objectArraySortPipes = {
+  hasKey: (obj, key) => Object.prototype.hasOwnProperty.call(obj, key),
+  isLast: (arr) => {
+    if (arr._parent) {
+      return arr._parent[arr._parent.length - 1] === arr._value;
+    }
+    return false;
+  },
+  isFirst: (arr) => {
+    if (arr._parent) {
+      return arr._parent[0] === arr._value;
+    }
+    return false;
+  },
+  values: (obj) => Object.keys(obj).map((key) => ({
+    _key: key,
+    // @ts-expect-error this is so ugly but hey it works
+    _value: obj[key],
+    _parent: obj,
+    // @ts-expect-error this is so ugly but hey it works
+    toString: () => obj[key]
+  })),
+  // @ts-expect-error ugh
+  sortAlpha: (arr) => {
+    if (!Array.isArray(arr)) {
+      return arr;
+    }
+    return arr.slice().sort((a, b) => a.localeCompare(b));
+  },
+  // @ts-expect-error ugh
+  reverse: (arr) => Array.isArray(arr) ? arr.slice().reverse() : arr,
+  // @ts-expect-error ugh
+  uniq: (arr) => Array.from(new Set(arr)),
+  // JSON
+  json: (obj) => JSON.stringify(obj),
+  // console.log
+  log: (obj) => {
+    console.log("Logging object: ", obj);
+    return obj;
+  }
+};
+var object_array_sort_default = objectArraySortPipes;
 
 // src/pipes/string.ts
 var escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 var stringPipes = {
-  trim: (value) => value.trim(),
+  trim: (value) => value.toString().trim(),
   trimAll: (char, value) => {
-    const escapedChar = escapeRegExp(char);
+    const escapedChar = escapeRegExp(char.toString());
     return value.replace(new RegExp(`^${escapedChar}+|${escapedChar}+$`, "g"), "");
   },
-  trimSuffix: (suffix, value) => value.endsWith(suffix) ? value.slice(0, -suffix.length) : value,
-  trimPrefix: (prefix, value) => value.startsWith(prefix) ? value.slice(prefix.length) : value,
-  upper: (value) => value.toUpperCase(),
-  lower: (value) => value.toLowerCase(),
-  title: (value) => value.replace(/\b\w/g, (char) => char.toUpperCase()),
-  untitle: (value) => value.replace(/\b\w/g, (char) => char.toLowerCase()),
-  repeat: (value, count) => value.repeat(parseInt(count, 10)),
-  substr: (value, start, end) => value.substring(parseInt(start, 10), parseInt(end, 10)),
-  nospace: (value) => value.replace(/\s+/g, ""),
-  trunc: (value, length) => parseInt(length, 10) > 0 ? value.slice(0, parseInt(length, 10)) : value.slice(parseInt(length, 10)),
-  abbrev: (value, maxLength) => value.length > parseInt(maxLength, 10) ? `${value.slice(0, parseInt(maxLength, 10) - 3)}...` : value,
+  trimSuffix: (suffix, value) => value.endsWith(suffix.toString()) ? value.slice(0, -suffix.toString().length) : value,
+  trimPrefix: (prefix, value) => value.startsWith(prefix.toString()) ? value.slice(prefix.toString().length) : value,
+  upper: (value) => value.toString().toUpperCase(),
+  lower: (value) => value.toString().toLowerCase(),
+  title: (value) => value.toString().replace(/\b\w/g, (char) => char.toUpperCase()),
+  untitle: (value) => value.toString().replace(/\b\w/g, (char) => char.toLowerCase()),
+  repeat: (value, count) => value.toString().repeat(parseInt(count, 10)),
+  substr: (value, start, end) => value.toString().substring(parseInt(start, 10), parseInt(end, 10)),
+  nospace: (value) => value.toString().replace(/\s+/g, ""),
+  trunc: (value, length) => parseInt(length, 10) > 0 ? value.toString().slice(0, parseInt(length, 10)) : value.toString().slice(parseInt(length, 10)),
+  abbrev: (value, maxLength) => value.toString().length > parseInt(maxLength, 10) ? `${value.toString().slice(0, parseInt(maxLength, 10) - 3)}...` : value,
   abbrevboth: (value, leftOffset, maxLength) => {
     const len = parseInt(maxLength, 10);
     const left = parseInt(leftOffset, 10);
-    if (value.length <= len) return value;
+    if (value.toString().length <= len) return value;
     const remainingLength = len - 6;
-    const rightOffset = value.length - (remainingLength + left);
-    if (remainingLength <= 0) return `...${value.slice(-left)}...`;
-    return `...${value.slice(left, value.length - rightOffset)}...`;
+    const rightOffset = value.toString().length - (remainingLength + left);
+    if (remainingLength <= 0) return `...${value.toString().slice(-left)}...`;
+    return `...${value.toString().slice(left, value.toString().toString().length - rightOffset)}...`;
   },
-  initials: (value) => value.split(/\s+/).map((word) => word.charAt(0).toUpperCase()).join(""),
-  wrap: (value, width) => value.replace(new RegExp(`(.{1,${width}})(\\s|$)`, "g"), "$1\n").trim(),
-  wrapWith: (value, width, separator) => value.replace(new RegExp(`(.{1,${width}})(\\s|$)`, "g"), `$1${separator}`).trim(),
-  contains: (value, substring) => value.includes(substring),
-  hasPrefix: (value, prefix) => value.startsWith(prefix),
-  hasSuffix: (value, suffix) => value.endsWith(suffix),
-  quote: (value) => `"${value}"`,
-  squote: (value) => `'${value}'`,
+  initials: (value) => value.toString().split(/\s+/).map((word) => word.charAt(0).toUpperCase()).join(""),
+  wrap: (value, width) => value.toString().replace(new RegExp(`(.{1,${width}})(\\s|$)`, "g"), "$1\n").trim(),
+  wrapWith: (value, width, separator) => value.toString().replace(new RegExp(`(.{1,${width}})(\\s|$)`, "g"), `$1${separator}`).trim(),
+  contains: (value, substring) => value.toString().includes(substring),
+  hasPrefix: (value, prefix) => value.toString().startsWith(prefix),
+  hasSuffix: (value, suffix) => value.toString().endsWith(suffix),
+  quote: (value) => `"${value.toString()}"`,
+  squote: (value) => `'${value.toString()}'`,
   cat: (...args) => args.join(" "),
-  indent: (value, width) => value.replace(/^/gm, " ".repeat(parseInt(width, 10))),
+  indent: (value, width) => value.toString().replace(/^/gm, " ".repeat(parseInt(width, 10))),
   nindent: (value, width) => `
-${" ".repeat(parseInt(width, 10))}${value.replace(/\n/g, `
+${" ".repeat(parseInt(width, 10))}${value.toString().replace(/\n/g, `
 ${" ".repeat(parseInt(width, 10))}`)}`,
-  replace: (value, oldSubStr, newSubStr) => value.replace(new RegExp(oldSubStr, "g"), newSubStr),
-  plural: (length, singular, plural) => parseInt(length, 10) === 1 ? singular : plural,
-  snakecase: (value) => value.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase(),
-  camelcase: (value) => value.replace(/_([a-z])/g, (g) => g[1].toUpperCase()).replace(/^./, (g) => g.toUpperCase()),
-  kebabcase: (value) => value.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase(),
-  swapcase: (value) => value.split("").map((char) => char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase()).join(""),
-  shuffle: (value) => value.split("").sort(() => Math.random() - 0.5).join(""),
-  regexMatch: (pattern, value) => new RegExp(pattern).test(value),
+  replace: (value, oldSubStr, newSubStr) => value.toString().replace(new RegExp(oldSubStr, "g"), newSubStr),
+  plural: (length, singular, plural) => parseInt(length.toString(), 10) === 1 ? singular : plural,
+  snakecase: (value) => value.toString().replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase(),
+  camelcase: (value) => value.toString().replace(/_([a-z])/g, (g) => g[1].toUpperCase()).replace(/^./, (g) => g.toUpperCase()),
+  kebabcase: (value) => value.toString().replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase(),
+  swapcase: (value) => value.toString().split("").map((char) => char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase()).join(""),
+  shuffle: (value) => value.toString().split("").sort(() => Math.random() - 0.5).join(""),
+  regexMatch: (pattern, value) => new RegExp(pattern.toString()).test(value),
   regexFindAll: (pattern, value, n) => {
-    const regex = new RegExp(pattern, "g");
+    const regex = new RegExp(pattern.toString(), "g");
     const matches = value.match(regex) || [];
     return n === "-1" ? matches : matches.slice(0, parseInt(n, 10));
   },
   regexFind: (pattern, value) => {
-    const match = value.match(new RegExp(pattern));
+    const match = value.match(new RegExp(pattern.toString()));
     return match ? match[0] : "";
   },
   regexReplaceAll: (pattern, value, replacement) => {
-    const regex = new RegExp(pattern, "g");
+    const regex = new RegExp(pattern.toString(), "g");
     return value.replace(regex, (_1, ...args) => replacement.replace(/\$\{(\d+)\}/g, (_2, groupIndex) => args[groupIndex - 1] || ""));
   },
   regexReplaceAllLiteral: (pattern, value, replacement) => {
-    const regex = new RegExp(pattern, "g");
+    const regex = new RegExp(pattern.toString(), "g");
     return value.replace(regex, replacement);
   },
   regexSplit: (pattern, value, n) => {
     const limit = parseInt(n, 10);
-    const regex = new RegExp(pattern);
+    const regex = new RegExp(pattern.toString());
     if (limit === -1) {
       return value.split(regex);
     }
     const result = value.split(regex);
     return result.slice(0, limit);
   },
-  regexQuoteMeta: (value) => value.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")
+  regexQuoteMeta: (value) => value.toString().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")
 };
 var string_default = stringPipes;
 
 // src/proxy.ts
 var defaultPipes = {
   ...string_default,
-  ...encoding_default
+  ...encoding_default,
+  ...object_array_sort_default
 };
 function createProxy(context, additionalPipes) {
   const pipes = { ...defaultPipes, ...additionalPipes || {} };
   return new Proxy(context, {
     get(target, prop) {
-      if (prop in target) {
+      if (typeof prop === "symbol") {
+        return target[prop];
+      }
+      if (typeof target[prop] !== "undefined") {
         const value = target[prop];
         if (typeof value === "object" && value !== null) {
           return createProxy(value, pipes);
@@ -228,8 +284,11 @@ function createProxy(context, additionalPipes) {
           const [pipeName, ...args] = segment.split(" ").map((arg) => arg.trim());
           if (pipes[pipeName]) {
             value = pipes[pipeName](value, ...args);
+            if (typeof value === "object" && value !== null) {
+              value = createProxy(value, pipes);
+            }
           } else {
-            throw new Error(`Pipe "${pipeName}" not found`);
+            throw new Error(`Pipe "${pipeName}" not found while processing "${prop}"`);
           }
         }
         return value;
@@ -309,7 +368,9 @@ async function main() {
     await Promise.all(processTemplates);
     console.log(`Processed ${templateFiles.length} files successfully.`);
   } catch (error) {
-    console.error(`Error: ${error.message}`);
+    if (!error.$processed) {
+      console.error("Unexpected error:", error);
+    }
     throw error;
   }
 }

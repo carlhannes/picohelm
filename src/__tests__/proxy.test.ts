@@ -1,20 +1,21 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import mustache from 'wontache';
 import createProxy from '../proxy';
-import { PipeFn } from '../../types/proxy-types';
+import { PipeDict, PipeFn } from '../../types/proxy-types';
 
-const extraPipes = {
-  uppercase: (value: string) => value.toUpperCase(),
-  lowercase: (value: string) => value.toLowerCase(),
-  reverse: (value: string) => value.split('').reverse().join(''),
-  plus: (value: string, add: string) => (
+const extraPipes: PipeDict = {
+  uppercase: (value) => value.toString().toUpperCase(),
+  lowercase: (value) => value.toString().toLowerCase(),
+  reverse: (value) => value.toString().split('').reverse().join(''),
+  plus: (value, add) => (
     parseFloat(value.toString()) + parseFloat(add.toString())
   ),
-  trim: (value: string) => value.trim(),
-  toFixed: (value: string, digits: string) => (
+  trim: (value) => value.toString().trim(),
+  toFixed: (value, digits) => (
     parseFloat(value.toString()).toFixed(parseFloat(digits.toString()))
   ),
-  toBase64: (value: string) => Buffer.from(value.toString()).toString('base64'),
-  fromBase64: (value: string) => Buffer.from(value.toString(), 'base64').toString('utf-8'),
+  toBase64: (value) => Buffer.from(value.toString()).toString('base64'),
+  fromBase64: (value) => Buffer.from(value.toString(), 'base64').toString('utf-8'),
 };
 
 describe('Wontache Piping Functionality', () => {
@@ -73,8 +74,7 @@ describe('Wontache Piping Functionality', () => {
       user: {
         name: 'Bob',
       },
-      extraPipes,
-    });
+    }, extraPipes);
 
     const output = mustache(template)(data);
     expect(output).toBe('BOB');
@@ -83,10 +83,10 @@ describe('Wontache Piping Functionality', () => {
   it('should apply pipe function with multiple arguments', () => {
     // Add a pipe function with multiple arguments
     const multiply: PipeFn = (
-      value: string,
-      factor: string,
-      add: string,
-    ) => parseFloat(value) * parseFloat(factor) + parseFloat(add);
+      value,
+      factor,
+      add,
+    ) => parseFloat(value.toString()) * parseFloat(factor) + parseFloat(add);
 
     const template = '{{number | multiply 2 3}}';
     const data = createProxy(

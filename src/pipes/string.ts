@@ -1,114 +1,115 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import { PipeDict } from '../../types/proxy-types';
 
 // Escapes special characters for regex
 export const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const stringPipes: PipeDict = {
-  trim: (value: string) => value.trim(),
+  trim: (value) => value.toString().trim(),
 
-  trimAll: (char: string, value: string) => {
-    const escapedChar = escapeRegExp(char);
+  trimAll: (char, value) => {
+    const escapedChar = escapeRegExp(char.toString());
     return value.replace(new RegExp(`^${escapedChar}+|${escapedChar}+$`, 'g'), '');
   },
 
   trimSuffix: (
-    suffix: string,
-    value: string,
-  ) => (value.endsWith(suffix) ? value.slice(0, -suffix.length) : value),
+    suffix,
+    value,
+  ) => (value.endsWith(suffix.toString()) ? value.slice(0, -suffix.toString().length) : value),
 
   trimPrefix: (
-    prefix: string,
-    value: string,
-  ) => (value.startsWith(prefix) ? value.slice(prefix.length) : value),
+    prefix,
+    value,
+  ) => (value.startsWith(prefix.toString()) ? value.slice(prefix.toString().length) : value),
 
-  upper: (value: string) => value.toUpperCase(),
-  lower: (value: string) => value.toLowerCase(),
-  title: (value: string) => value.replace(/\b\w/g, (char) => char.toUpperCase()),
-  untitle: (value: string) => value.replace(/\b\w/g, (char) => char.toLowerCase()),
-  repeat: (value: string, count: string) => value.repeat(parseInt(count, 10)),
+  upper: (value) => value.toString().toUpperCase(),
+  lower: (value) => value.toString().toLowerCase(),
+  title: (value) => value.toString().replace(/\b\w/g, (char) => char.toUpperCase()),
+  untitle: (value) => value.toString().replace(/\b\w/g, (char) => char.toLowerCase()),
+  repeat: (value, count) => value.toString().repeat(parseInt(count, 10)),
 
   substr: (
-    value: string,
-    start: string,
-    end: string,
-  ) => value.substring(parseInt(start, 10), parseInt(end, 10)),
+    value,
+    start,
+    end,
+  ) => value.toString().substring(parseInt(start, 10), parseInt(end, 10)),
 
-  nospace: (value: string) => value.replace(/\s+/g, ''),
+  nospace: (value) => value.toString().replace(/\s+/g, ''),
 
   trunc: (
-    value: string,
-    length: string,
+    value,
+    length,
   ) => (parseInt(length, 10) > 0
-    ? value.slice(0, parseInt(length, 10))
-    : value.slice(parseInt(length, 10))),
+    ? value.toString().slice(0, parseInt(length, 10))
+    : value.toString().slice(parseInt(length, 10))),
 
-  abbrev: (value: string, maxLength: string) => (value.length > parseInt(maxLength, 10) ? `${value.slice(0, parseInt(maxLength, 10) - 3)}...` : value),
+  abbrev: (value, maxLength) => (value.toString().length > parseInt(maxLength, 10) ? `${value.toString().slice(0, parseInt(maxLength, 10) - 3)}...` : value),
 
-  abbrevboth: (value: string, leftOffset: string, maxLength: string) => {
+  abbrevboth: (value, leftOffset, maxLength) => {
     const len = parseInt(maxLength, 10);
     const left = parseInt(leftOffset, 10);
 
-    if (value.length <= len) return value;
+    if (value.toString().length <= len) return value;
 
     const remainingLength = len - 6; // 6 accounts for the ellipses on both sides ("...")
-    const rightOffset = value.length - (remainingLength + left);
+    const rightOffset = value.toString().length - (remainingLength + left);
 
-    if (remainingLength <= 0) return `...${value.slice(-left)}...`;
+    if (remainingLength <= 0) return `...${value.toString().slice(-left)}...`;
 
-    return `...${value.slice(left, value.length - rightOffset)}...`;
+    return `...${value.toString().slice(left, value.toString().toString().length - rightOffset)}...`;
   },
 
-  initials: (value: string) => value.split(/\s+/).map((word) => word.charAt(0).toUpperCase()).join(''),
-  wrap: (value: string, width: string) => value.replace(new RegExp(`(.{1,${width}})(\\s|$)`, 'g'), '$1\n').trim(),
-  wrapWith: (value: string, width: string, separator: string) => value.replace(new RegExp(`(.{1,${width}})(\\s|$)`, 'g'), `$1${separator}`).trim(),
-  contains: (value: string, substring: string) => value.includes(substring),
-  hasPrefix: (value: string, prefix: string) => value.startsWith(prefix),
-  hasSuffix: (value: string, suffix: string) => value.endsWith(suffix),
-  quote: (value: string) => `"${value}"`,
-  squote: (value: string) => `'${value}'`,
-  cat: (...args: string[]) => args.join(' '),
-  indent: (value: string, width: string) => value.replace(/^/gm, ' '.repeat(parseInt(width, 10))),
-  nindent: (value: string, width: string) => `\n${' '.repeat(parseInt(width, 10))}${value.replace(/\n/g, `\n${' '.repeat(parseInt(width, 10))}`)}`,
-  replace: (value: string, oldSubStr: string, newSubStr: string) => value.replace(new RegExp(oldSubStr, 'g'), newSubStr),
+  initials: (value) => value.toString().split(/\s+/).map((word) => word.charAt(0).toUpperCase()).join(''),
+  wrap: (value, width) => value.toString().replace(new RegExp(`(.{1,${width}})(\\s|$)`, 'g'), '$1\n').trim(),
+  wrapWith: (value, width, separator) => value.toString().replace(new RegExp(`(.{1,${width}})(\\s|$)`, 'g'), `$1${separator}`).trim(),
+  contains: (value, substring) => value.toString().includes(substring),
+  hasPrefix: (value, prefix) => value.toString().startsWith(prefix),
+  hasSuffix: (value, suffix) => value.toString().endsWith(suffix),
+  quote: (value) => `"${value.toString()}"`,
+  squote: (value) => `'${value.toString()}'`,
+  cat: (...args) => args.join(' '),
+  indent: (value, width) => value.toString().replace(/^/gm, ' '.repeat(parseInt(width, 10))),
+  nindent: (value, width) => `\n${' '.repeat(parseInt(width, 10))}${value.toString().replace(/\n/g, `\n${' '.repeat(parseInt(width, 10))}`)}`,
+  replace: (value, oldSubStr, newSubStr) => value.toString().replace(new RegExp(oldSubStr, 'g'), newSubStr),
 
   plural: (
-    length: string,
-    singular: string,
-    plural: string,
-  ) => (parseInt(length, 10) === 1 ? singular : plural),
+    length,
+    singular,
+    plural,
+  ) => (parseInt(length.toString(), 10) === 1 ? singular : plural),
 
-  snakecase: (value: string) => value.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase(),
-  camelcase: (value: string) => value.replace(/_([a-z])/g, (g) => g[1].toUpperCase()).replace(/^./, (g) => g.toUpperCase()),
-  kebabcase: (value: string) => value.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(),
-  swapcase: (value: string) => value.split('').map((char) => (char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase())).join(''),
-  shuffle: (value: string) => value.split('').sort(() => Math.random() - 0.5).join(''),
-  regexMatch: (pattern: string, value: string) => new RegExp(pattern).test(value),
+  snakecase: (value) => value.toString().replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase(),
+  camelcase: (value) => value.toString().replace(/_([a-z])/g, (g) => g[1].toUpperCase()).replace(/^./, (g) => g.toUpperCase()),
+  kebabcase: (value) => value.toString().replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(),
+  swapcase: (value) => value.toString().split('').map((char) => (char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase())).join(''),
+  shuffle: (value) => value.toString().split('').sort(() => Math.random() - 0.5).join(''),
+  regexMatch: (pattern, value) => new RegExp(pattern.toString()).test(value),
 
-  regexFindAll: (pattern: string, value: string, n: string) => {
-    const regex = new RegExp(pattern, 'g');
+  regexFindAll: (pattern, value, n) => {
+    const regex = new RegExp(pattern.toString(), 'g');
     const matches = value.match(regex) || [];
     return n === '-1' ? matches : matches.slice(0, parseInt(n, 10));
   },
 
-  regexFind: (pattern: string, value: string) => {
-    const match = value.match(new RegExp(pattern));
+  regexFind: (pattern, value) => {
+    const match = value.match(new RegExp(pattern.toString()));
     return match ? match[0] : '';
   },
 
-  regexReplaceAll: (pattern: string, value: string, replacement: string) => {
-    const regex = new RegExp(pattern, 'g');
+  regexReplaceAll: (pattern, value, replacement) => {
+    const regex = new RegExp(pattern.toString(), 'g');
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return value.replace(regex, (_1, ...args) => replacement.replace(/\$\{(\d+)\}/g, (_2, groupIndex) => args[groupIndex - 1] || ''));
   },
 
-  regexReplaceAllLiteral: (pattern: string, value: string, replacement: string) => {
-    const regex = new RegExp(pattern, 'g');
+  regexReplaceAllLiteral: (pattern, value, replacement) => {
+    const regex = new RegExp(pattern.toString(), 'g');
     return value.replace(regex, replacement); // Perform a literal replacement
   },
 
-  regexSplit: (pattern: string, value: string, n: string) => {
+  regexSplit: (pattern, value, n) => {
     const limit = parseInt(n, 10);
-    const regex = new RegExp(pattern);
+    const regex = new RegExp(pattern.toString());
 
     if (limit === -1) {
       return value.split(regex);
@@ -118,7 +119,7 @@ const stringPipes: PipeDict = {
     return result.slice(0, limit);
   },
 
-  regexQuoteMeta: (value: string) => value.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'),
+  regexQuoteMeta: (value) => value.toString().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'),
 };
 
 export default stringPipes;

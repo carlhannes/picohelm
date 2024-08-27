@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 /* eslint-disable no-continue */
 /* eslint-disable no-bitwise */
 
@@ -57,10 +58,10 @@ function base32Decode(inputStr: string): string {
 }
 
 const encodingPipes: PipeDict = {
-  b64enc: (value: string) => Buffer.from(value).toString('base64'),
-  b64dec: (value: string) => Buffer.from(value, 'base64').toString('utf-8'),
-  b32enc: (value: string) => base32Encode(value),
-  b32dec: (value: string) => base32Decode(value),
+  b64enc: (value) => Buffer.from(value.toString()).toString('base64'),
+  b64dec: (value) => Buffer.from(value.toString(), 'base64').toString('utf-8'),
+  b32enc: (value) => base32Encode(value.toString()),
+  b32dec: (value) => base32Decode(value.toString()),
 };
 
 export default encodingPipes;

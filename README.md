@@ -11,6 +11,9 @@ A lightweight Kubernetes templating tool inspired by Helm, but with a focus on s
 - [Project Structure](#project-structure)
 - [Examples](#examples)
 - [Secrets](#secrets)
+- [Piping functionality](#piping-functionality)
+- [Advanced piping example](#advanced-piping-example)
+- [Available Pipes](#available-pipes)
 - [Limitations](#limitations)
 - [Contributing](#contributing)
 - [License](#license)
@@ -166,17 +169,17 @@ Read more about [Kubernetes Secrets](https://kubernetes.io/docs/concepts/configu
 
 Pipes are a powerful and flexible way to manipulate data within your templates. Inspired by the piping concept found in Unix/Linux systems and templating engines like Go's (that's widely used in Helm), pipes allow you to transform values dynamically as they are rendered in your templates. By chaining together different transformations, you can build complex data processing logic directly within your template, keeping your code clean and concise. While it is not 100% compatible with the Go/Helm templating engine, it provides a similar experience and syntax for users familiar with Helm, and we try our best to maintain a 1:1 compatibility with Helm's built-in functions.
 
-## How to Use Pipes
+### How to Use Pipes
 
 In your templates, you can apply pipes using the `|` symbol. The pipe operator allows you to pass the output of one expression as the input to a pipe function. You can also chain multiple pipes together to perform sequential transformations.
 
 ### Basic Example
 
 ```mustache
-{{ .Values.name | uppercase }}
+{{ .Values.name | upper }}
 ```
 
-In the above example, the `uppercase` pipe transforms the `name` variable to uppercase.
+In the above example, the `upper` pipe transforms the `name` variable to uppercase.
 If your values.yml file is `name: john doe`, the output will be `JOHN DOE`.
 
 ### Example with Multiple Pipes
@@ -202,6 +205,57 @@ and use the following template:
 
 The output will be `I-Am-Henry-VIII`.
 
+## Advanced piping example 
+
+Thanks to a combination of mustache / wontache functionality and the piping system, you can create complex templates that iterate over objects and arrays, apply transformations, and generate Kubernetes resources dynamically. Here is an example of how you can use pipes to generate multiple Kubernetes Secret resources from a single values file:
+
+```yaml
+{{#.Values.secrets | values}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ _key }}
+type: Opaque
+data:
+{{#_value | values}}
+  {{_key}}: {{_value | b64enc }}
+{{/_value | values}}
+---
+{{/.Values.secrets | values}}
+```
+
+In the example above, we iterate over .Values.secrets using the `| values` pipe, which expands an object to an array of objects with `_key` and `_value`, which then in turn can be iterated over again or piped.
+
+Given the following `values.yml` file:
+
+```yaml
+secrets:
+  postgres-secret:
+    POSTGRES_PASSWORD: kabanoss
+  rabbitmq-secret:
+    RABBITMQ_PASSWORD: baconandcheese
+```
+
+It would yield the following output:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+type: Opaque
+data:
+    POSTGRES_PASSWORD: a2FiYW5vc3M=
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-secret
+type: Opaque
+data:
+    RABBITMQ_PASSWORD: YmFjb25hbmRjaGVlc2U=
+---
+```
 
 ## Available Pipes
 

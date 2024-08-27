@@ -116,8 +116,10 @@ async function main() {
     await Promise.all(processTemplates);
 
     console.log(`Processed ${templateFiles.length} files successfully.`);
-  } catch (error) {
-    console.error(`Error: ${(error as any).message}`);
+  } catch (error: any) {
+    if (!error.$processed) {
+      console.error('Unexpected error:', error);
+    }
     throw error;
   }
 }

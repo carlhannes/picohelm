@@ -40,9 +40,17 @@ export async function processTemplate(
     console.log(`Processing ${path.relative(process.cwd(), templatePath)}`);
   }
 
-  const templateContent = await readFile(templatePath);
-  const template = wontache(templateContent);
-  const renderedContent = template(values);
+  let renderedContent: string;
+
+  try {
+    const templateContent = await readFile(templatePath);
+    const template = wontache(templateContent);
+    renderedContent = template(values);
+  } catch (error: any) {
+    console.error(`Error in template ${templatePath}:\n${error?.message}`);
+    error.$processed = true;
+    throw error;
+  }
 
   const outputPath = path.join('output', path.relative('templates', templatePath));
   const outputExtension = path.extname(outputPath);

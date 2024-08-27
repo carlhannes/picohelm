@@ -6,11 +6,13 @@
 
 import { PipeDict } from '../types/proxy-types';
 import encodingPipes from './pipes/encoding';
+import objectArraySortPipes from './pipes/object-array-sort';
 import stringPipes from './pipes/string';
 
 export const defaultPipes: PipeDict = {
   ...stringPipes,
   ...encodingPipes,
+  ...objectArraySortPipes,
 };
 
 export default function createProxy(
@@ -21,7 +23,10 @@ export default function createProxy(
 
   return new Proxy(context, {
     get(target, prop: string) {
-      if (prop in target) {
+      if (typeof prop === 'symbol') {
+        return target[prop];
+      }
+      if (typeof target[prop] !== 'undefined') {
         const value = target[prop];
         if (typeof value === 'object' && value !== null) {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -42,8 +47,12 @@ export default function createProxy(
           if (pipes[pipeName]) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             value = pipes[pipeName](value, ...args);
+            if ((typeof value === 'object' && value !== null)) {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+              value = createProxy(value, pipes);
+            }
           } else {
-            throw new Error(`Pipe "${pipeName}" not found`);
+            throw new Error(`Pipe "${pipeName}" not found while processing "${prop}"`);
           }
         }
         return value;
