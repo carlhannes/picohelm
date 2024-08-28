@@ -39,8 +39,8 @@ async function main() {
 
   const basePath = path.resolve(process.cwd(), program.args[0] || '.');
 
-  const templatesPath = path.join(basePath, options.templates as string);
-  const outputFolder = path.join(basePath, options.output as string);
+  const templatesPath: string = (options.templates as string)[0] === '/' ? options.templates : path.resolve(basePath, options.templates as string);
+  const outputFolder: string = (options.output as string)[0] === '/' ? options.output : path.resolve(basePath, options.output as string);
 
   const valuesFiles = options.values || [];
   const setValues: string[] = options.set || [];

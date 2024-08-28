@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import { glob } from "glob";
 
 // package.json
-var version = "0.3.1";
+var version = "0.3.2";
 
 // src/functions.ts
 import fs from "fs/promises";
@@ -302,8 +302,8 @@ async function main() {
   program.version(version, "-v, --version").argument("[basePath]", "Base path for templates and values", ".").option("-f, --values <paths...>", "Path to values files").option("--set <values...>", "Set values on the command line").option("--verbose", "Enable verbose logging to see processed files and the merged values").option("-t, --templates", "Path to templates folder", "templates").option("-o, --output, --out-dir <path>", "Output directory", "output").helpOption("-h, --help", "Display help for command").parse(process.argv);
   const options = program.opts();
   const basePath = path2.resolve(process.cwd(), program.args[0] || ".");
-  const templatesPath = path2.join(basePath, options.templates);
-  const outputFolder = path2.join(basePath, options.output);
+  const templatesPath = options.templates[0] === "/" ? options.templates : path2.resolve(basePath, options.templates);
+  const outputFolder = options.output[0] === "/" ? options.output : path2.resolve(basePath, options.output);
   const valuesFiles = options.values || [];
   const setValues = options.set || [];
   const verbose = options.verbose || false;
