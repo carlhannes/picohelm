@@ -74,6 +74,8 @@ Options:
 - `-f, --values <paths...>`: Path to values files
 - `--set <values...>`: Set values on the command line
 - `--verbose`: Enable verbose logging
+- `-o, --output, --out-dir <path>`: Output directory (default: output)
+- `-t, --templates <path>`: Path to templates directory (default: templates)
 - `-v, --version`: Output the version number
 - `-h, --help`: Display help for command
 

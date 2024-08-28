@@ -35,6 +35,7 @@ export async function processTemplate(
   templatePath: string,
   values: Values,
   verbose: boolean,
+  outputPath: string,
 ): Promise<void> {
   if (verbose) {
     console.log(`Processing ${path.relative(process.cwd(), templatePath)}`);
@@ -52,7 +53,6 @@ export async function processTemplate(
     throw error;
   }
 
-  const outputPath = path.join('output', path.relative('templates', templatePath));
   const outputExtension = path.extname(outputPath);
   const finalOutputPath = outputExtension === '.json'
     ? outputPath.replace(/\.json$/, '.yml')
@@ -61,9 +61,7 @@ export async function processTemplate(
   await writeFile(finalOutputPath, renderedContent);
 }
 
-export async function clearOutputFolder(): Promise<void> {
-  const outputPath = path.resolve(process.cwd(), 'output');
-
+export async function clearOutputFolder(outputPath: string): Promise<void> {
   try {
     const files = await fs.readdir(outputPath);
     const nonYamlFiles = files.filter((file) => !['.yml', '.yaml'].includes(path.extname(file)));

@@ -48,8 +48,9 @@ describe('Main functionality tests', () => {
   it('should clear the output folder if no non-YAML files exist', async () => {
     // @ts-expect-error wants dirents but we're mocking it as string[]
     mockReaddir.mockResolvedValueOnce(['file1.yml', 'file2.yaml']);
+    const outputPath = 'output';
 
-    await clearOutputFolder();
+    await clearOutputFolder(outputPath);
 
     expect(mockReaddir).toHaveBeenCalled();
     expect(mockUnlink).toHaveBeenCalledTimes(2);
@@ -58,18 +59,20 @@ describe('Main functionality tests', () => {
   it('should throw an error if non-YAML files exist in the output folder', async () => {
     // @ts-expect-error wants dirents but we're mocking it as string[]
     mockReaddir.mockResolvedValueOnce(['file1.yml', 'file2.txt']);
+    const outputPath = 'output';
 
-    await expect(clearOutputFolder()).rejects.toThrow('Non-YAML files found in output folder');
+    await expect(clearOutputFolder(outputPath)).rejects.toThrow('Non-YAML files found in output folder');
   });
 
   it('should process a template and write the rendered content to a file', async () => {
     const templateContent = 'Hello, {{name}}!';
     const values = { name: 'World' };
     const templatePath = 'templates/test.yml';
+    const outputPath = 'output/test.yml';
 
     mockReadFile.mockResolvedValueOnce(templateContent);
 
-    await processTemplate(templatePath, values, false);
+    await processTemplate(templatePath, values, false, outputPath);
 
     expect(mockReadFile).toHaveBeenCalledWith(templatePath, 'utf-8');
     expect(mockWriteFile).toHaveBeenCalledWith('output/test.yml', 'Hello, World!', 'utf-8');
@@ -111,10 +114,11 @@ describe('Additional tests to adhere to readme', () => {
     `;
     const values = {};
     const templatePath = 'templates/env.yml';
+    const outputPath = 'output/env.yml';
 
     mockReadFile.mockResolvedValueOnce(templateContent);
 
-    await processTemplate(templatePath, { '': { Values: values, ENV: process.env } }, false);
+    await processTemplate(templatePath, { '': { Values: values, ENV: process.env } }, false, outputPath);
 
     expect(mockWriteFile).toHaveBeenCalledWith(
       'output/env.yml',
@@ -138,10 +142,11 @@ describe('Additional tests to adhere to readme', () => {
       },
     };
     const templatePath = 'templates/nested.yml';
+    const outputPath = 'output/nested.yml';
 
     mockReadFile.mockResolvedValueOnce(templateContent);
 
-    await processTemplate(templatePath, { '': { Values: values, ENV: process.env } }, false);
+    await processTemplate(templatePath, { '': { Values: values, ENV: process.env } }, false, outputPath);
 
     expect(mockWriteFile).toHaveBeenCalledWith(
       'output/nested.yml',
@@ -163,12 +168,13 @@ describe('Additional tests to adhere to readme', () => {
     };
     const setValues = ['tag=v1.1.0'];
     const templatePath = 'templates/image.yml';
+    const outputPath = 'output/image.yml';
 
     mockReadFile.mockResolvedValueOnce(templateContent);
 
     const finalValues = { '': { Values: mergeValues([values, parseSetValues(setValues)]), ENV: process.env } };
 
-    await processTemplate(templatePath, finalValues, false);
+    await processTemplate(templatePath, finalValues, false, outputPath);
 
     expect(mockWriteFile).toHaveBeenCalledWith(
       'output/image.yml',

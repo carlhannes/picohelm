@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import { glob } from "glob";
 
 // package.json
-var version = "0.3.0";
+var version = "0.3.1";
 
 // src/functions.ts
 import fs from "fs/promises";
@@ -29,7 +29,7 @@ function parseYamlOrJson(content) {
     return JSON.parse(content);
   }
 }
-async function processTemplate(templatePath, values, verbose) {
+async function processTemplate(templatePath, values, verbose, outputPath) {
   if (verbose) {
     console.log(`Processing ${path.relative(process.cwd(), templatePath)}`);
   }
@@ -44,13 +44,11 @@ ${error?.message}`);
     error.$processed = true;
     throw error;
   }
-  const outputPath = path.join("output", path.relative("templates", templatePath));
   const outputExtension = path.extname(outputPath);
   const finalOutputPath = outputExtension === ".json" ? outputPath.replace(/\.json$/, ".yml") : outputPath;
   await writeFile(finalOutputPath, renderedContent);
 }
-async function clearOutputFolder() {
-  const outputPath = path.resolve(process.cwd(), "output");
+async function clearOutputFolder(outputPath) {
   try {
     const files = await fs.readdir(outputPath);
     const nonYamlFiles = files.filter((file) => ![".yml", ".yaml"].includes(path.extname(file)));
@@ -301,10 +299,11 @@ function createProxy(context, additionalPipes) {
 // src/picohelm.ts
 dotenv.config();
 async function main() {
-  program.version(version, "-v, --version").argument("[basePath]", "Base path for templates and values", ".").option("-f, --values <paths...>", "Path to values files").option("--set <values...>", "Set values on the command line").option("--verbose", "Enable verbose logging to see processed files and the merged values").helpOption("-h, --help", "Display help for command").parse(process.argv);
+  program.version(version, "-v, --version").argument("[basePath]", "Base path for templates and values", ".").option("-f, --values <paths...>", "Path to values files").option("--set <values...>", "Set values on the command line").option("--verbose", "Enable verbose logging to see processed files and the merged values").option("-t, --templates", "Path to templates folder", "templates").option("-o, --output, --out-dir <path>", "Output directory", "output").helpOption("-h, --help", "Display help for command").parse(process.argv);
   const options = program.opts();
   const basePath = path2.resolve(process.cwd(), program.args[0] || ".");
-  const templatesPath = path2.join(basePath, "templates");
+  const templatesPath = path2.join(basePath, options.templates);
+  const outputFolder = path2.join(basePath, options.output);
   const valuesFiles = options.values || [];
   const setValues = options.set || [];
   const verbose = options.verbose || false;
@@ -357,13 +356,18 @@ async function main() {
         JSON.stringify(finalValues, null, 2)
       );
     }
-    await clearOutputFolder();
+    await clearOutputFolder(outputFolder);
     const templateFiles = await glob("**/*.{yml,yaml,json}", { cwd: templatesPath });
     if (templateFiles.length === 0) {
       throw new Error("No template files found in the templates folder.");
     }
     const processTemplates = templateFiles.map(
-      (file) => processTemplate(path2.join(templatesPath, file), finalValues, verbose)
+      (file) => processTemplate(
+        path2.join(templatesPath, file),
+        finalValues,
+        verbose,
+        path2.join(outputFolder, file)
+      )
     );
     await Promise.all(processTemplates);
     console.log(`Processed ${templateFiles.length} files successfully.`);

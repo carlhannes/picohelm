@@ -30,12 +30,18 @@ async function main() {
     .option('-f, --values <paths...>', 'Path to values files')
     .option('--set <values...>', 'Set values on the command line')
     .option('--verbose', 'Enable verbose logging to see processed files and the merged values')
+    .option('-t, --templates', 'Path to templates folder', 'templates')
+    .option('-o, --output, --out-dir <path>', 'Output directory', 'output')
     .helpOption('-h, --help', 'Display help for command')
     .parse(process.argv);
 
   const options = program.opts();
+
   const basePath = path.resolve(process.cwd(), program.args[0] || '.');
-  const templatesPath = path.join(basePath, 'templates');
+
+  const templatesPath = path.join(basePath, options.templates as string);
+  const outputFolder = path.join(basePath, options.output as string);
+
   const valuesFiles = options.values || [];
   const setValues: string[] = options.set || [];
   const verbose: boolean = options.verbose || false;
@@ -100,7 +106,7 @@ async function main() {
     }
 
     // Clear output folder
-    await clearOutputFolder();
+    await clearOutputFolder(outputFolder);
 
     // Process templates
     const templateFiles = await glob('**/*.{yml,yaml,json}', { cwd: templatesPath });
@@ -110,7 +116,12 @@ async function main() {
     }
 
     const processTemplates = templateFiles.map(
-      (file) => processTemplate(path.join(templatesPath, file), finalValues, verbose),
+      (file) => processTemplate(
+        path.join(templatesPath, file),
+        finalValues,
+        verbose,
+        path.join(outputFolder, file),
+      ),
     );
 
     await Promise.all(processTemplates);
